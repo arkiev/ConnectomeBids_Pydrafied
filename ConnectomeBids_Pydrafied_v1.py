@@ -8,7 +8,7 @@ from fileformats.medimage import NiftiGzXBvec, NiftiGz
 from fileformats.medimage_mrtrix3 import ImageFormat
 
 # Define the path and output_path variables
-output_path = '/Users/arkievdsouza/git/ConnectomeBids_Pydrafied/outputs/'
+output_path = '/Users/arkievdsouza/git/ConnectomeBids_Pydrafied/outputs2/'
 
 # Define the input_spec for the workflow
 input_spec = {"dwi": NiftiGz, "bvec": File, "bval": File, "json": File}
