@@ -1,0 +1,5 @@
+# command_history: transformconvert /Users/arkievdsouza/git/ConnectomeBids_Pydrafied/outputs/carriage3/EpiReg_3d65dd6069d036e133ffd69d2e929d79/epi2struct.mat /Users/arkievdsouza/git/ConnectomeBids_Pydrafied/outputs/carriage3/dwi_meanbzero.nii.gz /Users/arkievdsouza/git/ConnectomeBids_Pydrafied/outputs/carriage3/t1brain.nii.gz flirt_import epi2struct_mrtrix.txt  (version=3.0.4-699-g04cb84da)
+0.999997086712548 0.00177025777796183 0.00162669561214706 -0.0609218418860103
+-0.00177026827947432 0.999998440009251 4.98656528976939e-06 0.191304446878692
+-0.00162668243341749 -7.87097881097942e-06 0.99999863242171 -0.0162670801670508
+0 0 0 1
