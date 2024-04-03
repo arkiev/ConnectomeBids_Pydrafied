@@ -283,12 +283,25 @@ wf.add(
     )
 )
 
+# # Step 9: Perform DWI->T1 registration
+# wf.add(
+#     EpiReg(
+#         epi=wf.meanb0_task.lzout.out_file,
+#         t1_head=wf.nifti_normimg.lzout.out_file,
+#         t1_brain=wf.nifti_t1brain.lzout.out_file,
+#         wmseg=wf.mrcalc_wmbin.lzout.output_image,
+#         out_base="epi2struct",
+#         name="epi_reg_task", 
+#         matrix="epi2struct.mat",
+#     )
+# )
+
 # # transformconvert task 
 wf.add(
     TransformConvert(
         input=wf.epi_reg_task.lzout.matrix,
         operation="flirt_import",
-        flirt_in=wf.meanb0_task.lzout.out_file,
+        flirt_in=wf.crop_task_dwi.lzout.out_file,
         flirt_ref=wf.nifti_t1brain.lzout.out_file,
         out_file="epi2struct_mrtrix.txt",
         name="transformconvert_task", 
@@ -312,7 +325,7 @@ wf.add(
     MrTransform(
         name="transformDWI_task",
         in_file=wf.crop_task_dwi.lzout.out_file,
-        out_file="DWI_registered.mif",
+        out_file="DWI_processed_registered.mif",
         linear=wf.transformconvert_task.lzout.out_file,
         strides=wf.nifti_t1brain.lzout.out_file,
     )
@@ -326,7 +339,7 @@ wf.add(
         out_file="DWImask_registered.mif",
         linear=wf.transformconvert_task.lzout.out_file,
         strides=wf.nifti_t1brain.lzout.out_file,
-        template=wf.transformDWI_task.lzout.out,
+        template=wf.transformDWI_task.lzout.out_file,
         interp="nearest"
     )
 )
@@ -336,110 +349,110 @@ wf.add(
 # # # # # Tractography preparation steps #
 # # # # ##################################
 
-# # Estimate Response Function (subject)
-wf.add(
-    Dwi2Response_Dhollander(
-        name="EstimateResponseFcn_task",
-        in_file=wf.transformDWI_task.lzout.out_file,
-        mask=wf.transformDWImask_task.lzout.out_file,
-        voxels="voxels.mif",
-    )
-)
+# # # Estimate Response Function (subject)
+# wf.add(
+#     Dwi2Response_Dhollander(
+#         name="EstimateResponseFcn_task",
+#         in_file=wf.transformDWI_task.lzout.out_file,
+#         mask=wf.transformDWImask_task.lzout.out_file,
+#         voxels="voxels.mif",
+#     )
+# )
 
-# Generate FOD (Consider switching from subject-response to group-average-response)
-wf.add(
-    Dwi2Fod(
-        name="GenFod_task",
-        algorithm="msmt_csd",
-        dwi=wf.transformDWI_task.lzout.out_file,
-        mask=wf.transformDWImask_task.lzout.out_file,
-        response_wm=wf.EstimateResponseFcn_task.lzout.out_sfwm,
-        response_gm=wf.EstimateResponseFcn_task.lzout.out_gm,
-        response_csf=wf.EstimateResponseFcn_task.lzout.out_csf,
-    )
-)
+# # Generate FOD (Consider switching from subject-response to group-average-response)
+# wf.add(
+#     Dwi2Fod(
+#         name="GenFod_task",
+#         algorithm="msmt_csd",
+#         dwi=wf.transformDWI_task.lzout.out_file,
+#         mask=wf.transformDWImask_task.lzout.out_file,
+#         response_wm=wf.EstimateResponseFcn_task.lzout.out_sfwm,
+#         response_gm=wf.EstimateResponseFcn_task.lzout.out_gm,
+#         response_csf=wf.EstimateResponseFcn_task.lzout.out_csf,
+#     )
+# )
 
-# Normalise FOD
-wf.add(
-    MtNormalise(
-        name="NormFod_task",
-        mask=wf.crop_task_mask.lzout.out_file,
-        fod_wm=wf.GenFod_task.lzout.fod_wm,
-        fod_gm=wf.GenFod_task.lzout.fod_gm,
-        fod_csf=wf.GenFod_task.lzout.fod_csf,
-    )
-)
+# # Normalise FOD
+# wf.add(
+#     MtNormalise(
+#         name="NormFod_task",
+#         mask=wf.crop_task_mask.lzout.out_file,
+#         fod_wm=wf.GenFod_task.lzout.fod_wm,
+#         fod_gm=wf.GenFod_task.lzout.fod_gm,
+#         fod_csf=wf.GenFod_task.lzout.fod_csf,
+#     )
+# )
 
-# Tractography
-wf.add(
-    TckGen(
-        name="tckgen_task",
-        source=wf.NormFod_task.lzout.fod_wm_norm,
-        algorithm='ifod2',
-        select=1000,
-        minlength=5.0,
-        maxlength=350.0,
-        seed_dynamic=wf.NormFod_task.lzout.fod_wm_norm,
-        act=wf.transform5TT_task.lzout.out_file,
-        backtrack=True,
-        crop_at_gmwmi=True,
-        cutoff=0.06,
-        seeds=0,
-        )
-)
+# # Tractography
+# wf.add(
+#     TckGen(
+#         name="tckgen_task",
+#         source=wf.NormFod_task.lzout.fod_wm_norm,
+#         algorithm='ifod2',
+#         select=1000,
+#         minlength=5.0,
+#         maxlength=350.0,
+#         seed_dynamic=wf.NormFod_task.lzout.fod_wm_norm,
+#         act=wf.lzin.fTT_image_T1space,
+#         backtrack=True,
+#         crop_at_gmwmi=True,
+#         cutoff=0.06,
+#         seeds=0,
+#         )
+# )
 
-# SIFT2
-wf.add(
-    TckSift2(
-        name="SIF2_task",
-        in_tracks=wf.tckgen_task.lzout.tracks,
-        in_fod=wf.NormFod_task.lzout.fod_wm_norm,
-        act=wf.transform5TT_task.lzout.out_file,
+# # SIFT2
+# wf.add(
+#     TckSift2(
+#         name="SIF2_task",
+#         in_tracks=wf.tckgen_task.lzout.tracks,
+#         in_fod=wf.NormFod_task.lzout.fod_wm_norm,
+#         act=wf.lzin.fTT_image_T1space,
 
-    )
-)
+#     )
+# )
 
-################
-# CONNECTOMICS #
-################
-wf.add(
-    Tck2Connectome(
-        name="connectomics_task",
-        in_tracks=wf.tckgen_task.lzout.tracks,
-        tck_weights_in=wf.SIF2_task.lzout.out_weights,
-        nodes_in=wf.transformParcellation_task.lzout.out_file,
-        symmetric=True,
-        zero_diagonal=True,
-    )
-)
+# ################
+# # CONNECTOMICS #
+# ################
+# wf.add(
+#     Tck2Connectome(
+#         name="connectomics_task",
+#         in_tracks=wf.tckgen_task.lzout.tracks,
+#         tck_weights_in=wf.SIF2_task.lzout.out_weights,
+#         nodes_in=wf.lzin.parcellation_image_T1space,
+#         symmetric=True,
+#         zero_diagonal=True,
+#     )
+# )
 
-############
-# TDI maps #
-############
+# ############
+# # TDI maps #
+# ############
 
-wf.add(
-    TckMap(
-        name="TDImap_task",
-        in_tracks=wf.tckgen_task.lzout.tracks,
-        tck_weights_in=wf.SIF2_task.lzout.out_weights,
-        vox=0.2,
-        template=wf.transform5TT_task.lzout.out_file,
-        out_file="TDI.mif"
-    )
-)
+# wf.add(
+#     TckMap(
+#         name="TDImap_task",
+#         in_tracks=wf.tckgen_task.lzout.tracks,
+#         tck_weights_in=wf.SIF2_task.lzout.out_weights,
+#         vox=0.2,
+#         template=wf.nifti_t1brain.lzout.out_file,
+#         out_file="TDI.mif"
+#     )
+# )
 
-wf.add(
-    TckMap(
-        name="DECTDImap_task",
-        in_tracks=wf.tckgen_task.lzout.tracks,
-        tck_weights_in=wf.SIF2_task.lzout.out_weights,
-        vox=0.2,
-        template=wf.transform5TT_task.lzout.out_file,
-        dec=True,
-        out_file="DECTDI.mif"
+# wf.add(
+#     TckMap(
+#         name="DECTDImap_task",
+#         in_tracks=wf.tckgen_task.lzout.tracks,
+#         tck_weights_in=wf.SIF2_task.lzout.out_weights,
+#         vox=0.2,
+#         template=wf.nifti_t1brain.lzout.out_file,
+#         dec=True,
+#         out_file="DECTDI.mif"
 
-    )
-)
+#     )
+# )
 
 
 # # SET WF OUTPUT
@@ -453,11 +466,13 @@ wf.add(
 # wf.set_output(("sift_weights", wf.SIF2_task.lzout.out_weights))
 # wf.set_output(("wm_fod_norm", wf.NormFod_task.lzout.fod_wm_norm))
 # wf.set_output(("conenctome_file", wf.connectomics_task.lzout.connectome_out))
-wf.set_output(("TDI_file", wf.TDImap_task.lzout.out_file))
-wf.set_output(("DECTDI_file", wf.DECTDImap_task.lzout.out_file))
+# wf.set_output(("TDI_file", wf.TDImap_task.lzout.out_file))
+# wf.set_output(("DECTDI_file", wf.DECTDImap_task.lzout.out_file))
 
-
-
+# wf.set_output(("DWIreg", wf.transformDWI_task.lzout.out_file))
+wf.set_output(("meanB0reg", wf.transformMeanb0_task.lzout.out_file))
+wf.set_output(("meanB0", wf.meanb0_task.lzout.out_file))
+wf.set_output(("T1brain",wf.nifti_t1brain.lzout.out_file,))
 
 # ########################
 # # Execute the workflow #
